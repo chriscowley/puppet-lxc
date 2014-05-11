@@ -1,0 +1,38 @@
+# File is managed by puppet
+#
+# Container with network virtualized using a pre-configured bridge named br0 and
+# veth pair virtual network devices
+lxc.utsname=<%= @name %>
+lxc.rootfs=/var/lib/lxc/<%= @name %>/rootfs
+lxc.mount=/var/lib/lxc/<%= @name %>/fstab
+#system
+lxc.autodev=1
+lxc.tty=1
+lxc.pts=1024
+lxc.cap.drop=sys_module mac_admin mac_override sys_time
+lxc.kmsg=0
+lxc.stopsignal=SIGRTMIN+4
+#networking
+lxc.network.type=veth
+lxc.network.flags=up
+lxc.network.link=br0
+lxc.network.ipv4=<%= @ip %>
+lxc.network.ipv4.gateway=<%= @gateway %>
+lxc.network.name=eth0
+lxc.network.mtu=1500
+#cgroups
+lxc.cgroup.memory.limit_in_bytes=<%= @mem_limit %>
+#lxc.cgroup.memory.memsw.limit_in_bytes=<%= @mem_plus_swap_limit %>
+lxc.cgroup.devices.deny = a
+lxc.cgroup.devices.allow = c *:* m
+lxc.cgroup.devices.allow = b *:* m
+lxc.cgroup.devices.allow = c 1:3 rwm
+lxc.cgroup.devices.allow = c 1:5 rwm
+lxc.cgroup.devices.allow = c 1:7 rwm
+lxc.cgroup.devices.allow = c 1:8 rwm
+lxc.cgroup.devices.allow = c 1:9 rwm
+lxc.cgroup.devices.allow = c 4:1 rwm
+lxc.cgroup.devices.allow = c 5:0 rwm
+lxc.cgroup.devices.allow = c 5:1 rwm
+lxc.cgroup.devices.allow = c 5:2 rwm
+lxc.cgroup.devices.allow = c 136:* rwm
