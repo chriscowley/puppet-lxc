@@ -1,21 +1,26 @@
 #
 define lxc::container(
-  $hostname      = $name,
-  $template      = $lxc::params::template,
-  $ensure        = 'present',
-  $enable        = true,
-  $mem_limit     = '512M',
+  $hostname       = $name,
+  $template       = $lxc::params::template,
+  $ensure         = 'present',
+  $enable         = true,
+  $mem_limit      = '512M',
   $mem_plus_swap_limit = '1024M',
-  $ip            = '"10.7.1.2/24"',
-  $gateway       = '10.7.1.1',
-  $facts         = undef,
-  $autoboot      = true,
-  $backing_store = 'dir',
-  $clone         = false,
-  $snapshot      = false,
+  $ip             = '"10.7.1.2/24"',
+  $gateway        = '10.7.1.1',
+  $facts          = undef,
+  $autoboot       = true,
+  $backing_store  = 'dir',
+  $clone          = false,
+  $snapshot       = false,
+  $puppet         = false,
+  $puppet_package = 'puppet',
+  $puppet_server_host = 'puppet',
+  $puppet_server_ip   = '127.0.0.1'
 ) {
   # directory of lxc_auto file is used to check if lxc container is created 
   $lxc_auto     = "/etc/lxc/auto/${name}.conf"
+
   # lxc configuration file
   $config_file  = "/var/lib/lxc/${name}/config"
 
@@ -42,7 +47,13 @@ define lxc::container(
     $lxc_create   = "/usr/bin/lxc-clone -o $clone -n ${name} ${clone_args} ${snap_args}"
   } else {
     # use lxc-create
-    $lxc_create   = "/usr/bin/lxc-create -n ${name} -t ${template} -B ${backing_store}"
+    if $puppet == true {
+      # install puppet
+      $package_args = $puppet_package
+    } else {
+      $package_args = ''
+    }
+    $lxc_create   = "/usr/bin/lxc-create -n ${name} -t ${template} -B ${backing_store} -- --packages ${package_args}"
 
   }
 
@@ -66,12 +77,32 @@ define lxc::container(
         require => [File['/etc/lxc/guests'], Exec["lxc-create ${name}"]]
       }
 
-      exec { "lxc-create ${name}":
-        creates   => "/var/lib/lxc/${name}",
-        command   => "/usr/bin/haveged && ${lxc_create}",
-        logoutput => 'on_failure',
-        timeout   => 30000,
-        require   => File['/usr/share/lxc/templates/lxc-archlinux'],
+      if $clone == false {
+        exec { "haveged ${name}":
+          command => '/usr/bin/haveged',
+          creates => "/var/lib/lxc/${name}",
+        } ->
+        exec { "lxc-create ${name}":
+          creates   => "/var/lib/lxc/${name}",
+          command   => "${lxc_create}",
+          logoutput => 'on_failure',
+          timeout   => 60000,
+          require   => File['/usr/share/lxc/templates/lxc-archlinux'],
+        }
+      } else {
+        exec { "haveged ${name}":
+          command => '/usr/bin/haveged',
+          creates => "/var/lib/lxc/${name}",
+        } ->
+        exec { "lxc-create ${name}":
+          creates   => "/var/lib/lxc/${name}",
+          command   => "${lxc_create}",
+          logoutput => 'on_failure',
+          timeout   => 60000,
+          require   => File['/usr/share/lxc/templates/lxc-archlinux'],
+        }
+
+        Exec["lxc-create ${clone}"] -> Exec["lxc-create ${name}"]
       }
 
       exec { "lxc-start ${name}":
@@ -108,7 +139,24 @@ define lxc::container(
             ensure => 'directory';
           "/var/lib/lxc/${name}/rootfs/etc/facter/facts.d/lxc_module.yaml":
             ensure  => 'present',
+            require => Exec["lxc-create ${name}"],
             content => inline_template('<%= facts.to_yaml %>');
+        }
+      }
+
+      if $puppet != false {
+        if $clone != false {
+          fail("puppet cannot be installed and setup when cloning a container! Please set puppet to false")
+        } else {
+          exec { "puppethost ${name}":
+            command => "/usr/bin/echo ${puppet_server_ip}\t${puppet_server_host} >> /var/lib/lxc/${name}/rootfs/etc/hosts && /usr/bin/echo 1 >> /var/lib/lxc/${name}/.setup_puppet_host",
+            require => Exec["lxc-create ${name}"],
+            creates => "/var/lib/lxc/${name}/.setup_puppet_host",
+          } ->
+          exec { "puppetserver ${name}":
+            command => "/usr/bin/echo server=${puppet_server_host} >> /var/lib/lxc/${name}/rootfs/etc/puppet/puppet.conf && /usr/bin/echo 1 >> /var/lib/lxc/${name}/.setup_puppet_server",
+            creates => "/var/lib/lxc/${name}/.setup_puppet_server",
+          }
         }
       }
     }
