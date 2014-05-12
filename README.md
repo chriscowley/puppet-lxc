@@ -53,6 +53,40 @@ this on non-Btrfs filesystems:
         }
     }
 
+### Simple Container with Puppet
+
+This will setup same container as in the example above, but with puppet
+preinstalled and configured to use specified server. As an extra, the hostname
+and ip combination will be added to /etc/hosts. This is ONE-TIME ONLY and
+performed only during creation of new containers.
+
+    node 'archlinux.example.org' {
+        $containters = {
+            'container0' =>   {
+                hostname            => 'container0.archlinux.example.org',
+                template            => 'archlinux',
+                ensure              => 'present',
+                mem_limit           => '256M',
+                mem_plus_swap_limit => '512M',
+                ip                  => '10.7.7.23/24',
+                gateway             => '10.7.7.101',
+                autoboot            => true,
+                puppet              => true,
+                puppet_package      => 'puppet',
+                puppet_server_host  => 'puppet',
+                puppet_server_ip    => '10.0.0.1',
+                },
+        }
+
+        class { 'lxc':
+            containers   => $cont,
+            bridge_iface => 'eth0',
+            bridge_ip    => '10.7.7.101/24',
+            bridge_gw    => '10.7.7.1',
+        }
+    }
+
+
 ### Btrfs Containers
 
 This will configure "container1" based on archlinux template. It will also setup
