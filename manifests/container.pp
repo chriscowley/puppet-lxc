@@ -1,24 +1,24 @@
 #
 define lxc::container(
-  $hostname       = $name,
-  $template       = $lxc::params::template,
-  $ensure         = 'present',
-  $enable         = true,
-  $mem_limit      = '512M',
+  $hostname            = $name,
+  $template            = $lxc::params::template,
+  $ensure              = 'present',
+  $enable              = true,
+  $mem_limit           = '512M',
   $mem_plus_swap_limit = '1024M',
-  $ip             = '"10.7.1.2/24"',
-  $gateway        = '10.7.1.1',
-  $facts          = undef,
-  $autoboot       = true,
-  $backing_store  = 'dir',
-  $clone          = false,
-  $snapshot       = false,
-  $puppet         = false,
-  $puppet_package = 'puppet',
-  $puppet_server_host = 'puppet',
-  $puppet_server_ip   = '127.0.0.1'
+  $ip                  = '"10.7.1.2/24"',
+  $gateway             = '10.7.1.1',
+  $facts               = undef,
+  $autoboot            = true,
+  $backing_store       = 'dir',
+  $clone               = false,
+  $snapshot            = false,
+  $puppet              = false,
+  $puppet_package      = 'puppet',
+  $puppet_server_host  = 'puppet',
+  $puppet_server_ip    = '127.0.0.1'
 ) {
-  # directory of lxc_auto file is used to check if lxc container is created 
+  # directory of lxc_auto file is used to check if lxc container is created
   $lxc_auto     = "/etc/lxc/auto/${name}.conf"
 
   # lxc configuration file
@@ -154,7 +154,7 @@ define lxc::container(
             creates => "/var/lib/lxc/${name}/.setup_puppet_host",
           } ->
           exec { "puppetserver ${name}":
-            command => "/usr/bin/echo server=${puppet_server_host} >> /var/lib/lxc/${name}/rootfs/etc/puppet/puppet.conf && /usr/bin/echo 1 >> /var/lib/lxc/${name}/.setup_puppet_server",
+            command => "/usr/bin/echo server=${puppet_server_host} >> /var/lib/lxc/${name}/rootfs/etc/puppet/puppet.conf && /usr/bin/echo 1 >> /var/lib/lxc/${name}/.setup_puppet_server && /usr/bin/ln -s /var/lib/lxc/${name}/rootfs/usr/lib/systemd/system/puppet.service' /var/lib/lxc/${name}/rootfs/etc/systemd/system/multi-user.target.wants/puppet.service",
             creates => "/var/lib/lxc/${name}/.setup_puppet_server",
           }
         }
